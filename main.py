@@ -1,6 +1,7 @@
-from fastapi import FastAPI, Form
+from fastapi import FastAPI, Form, Query
 from enum import Enum
 from pydantic import BaseModel
+from typing import Annotated
 
 
 app = FastAPI()
@@ -61,6 +62,49 @@ class Item(BaseModel):
 @app.post("/items/details/")
 async def create_item(item: Item):
     return item
+
+# Here the item JSON data is modefied and gives modified JSON object
+@app.post("/items/details/modify/")
+async def create_item(item: Item):
+    item_dict = item.dict()
+    if item.tax:
+        tax_amount = item.price * item.tax / 100
+        price_with_tax = item.price + tax_amount
+        item_dict.update({"price_with_tax": price_with_tax})
+    return item_dict
+
+# Request body + path parameters
+@app.put("/items/details/modify/{item_id}")
+async def update_item(item_id: int, item: Item):
+    return {"item_id": item_id, **item.dict()}
+
+# Request body + path + query parameters¶
+@app.put("/items/details/modify/q_params/{item_id}")
+async def update_item(item_id: int, item: Item, q: str | None = None):
+    result = {"item_id": item_id, **item.dict()}
+    if q:
+        result.update({"q": q})
+    return result
+
+# Query parameter with additional validation, for that we need to import Query from fastapi, Here max_lenght allowed is 50
+@app.get("/items/modify_q_params_validations/")
+async def read_items(q: Annotated[str | None, Query(max_length=50)] = None):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+
+# List of Query parameters, we can give values like "?q=10&q=20&q=30"
+@app.get("/items/list_of_params/mandatory/")
+async def read_items(q: Annotated[list[str], Query()]):
+    query_items = {"q": q}
+    return query_items
+
+# Default value for list of query parameteres
+@app.get("/items/list_of_params/optional/")
+async def read_items(q: Annotated[list[str], Query()] = ["foo", "bar"]):
+    query_items = {"q": q}
+    return query_items
 
 # To get form data from request we need to import "Form" from fastapi
 @app.post("/submit/")
