@@ -1,6 +1,6 @@
-from fastapi import FastAPI, Form, Query
+from fastapi import FastAPI, Form, Query, Path, Cookie, Header
 from enum import Enum
-from pydantic import BaseModel
+from pydantic import BaseModel, HttpUrl
 from typing import Annotated
 
 
@@ -106,6 +106,19 @@ async def read_items(q: Annotated[list[str], Query()] = ["foo", "bar"]):
     query_items = {"q": q}
     return query_items
 
+# Add additional parameters in query or metadata to display in swagger api documentation
+@app.get("/items/add_title/")
+async def read_items(
+    q: Annotated[str | None, Query(title="Query_string",
+    description="Query string for the items to search in the database that have a good match",
+     alias="item-query",
+ min_length=3)] = None,
+):
+    results = {"items": [{"item_id": "Foo"}, {"item_id": "Bar"}]}
+    if q:
+        results.update({"q": q})
+    return results
+
 # To get form data from request we need to import "Form" from fastapi
 @app.post("/submit/")
 async def submit_form(username: str = Form(...), password: str = Form(...)):
@@ -116,3 +129,46 @@ async def submit_form(username: str = Form(...), password: str = Form(...)):
 async def submit_form(username: str = Form(default="default_username"), password: str = Form(default="default_password")):
     return {"username": username, "password": password}
 
+
+# Path parameters and Numeric validation or to add metadata about path variables
+@app.get("/items/path_validation/{item_id}")
+async def read_items(
+    item_id: Annotated[int, Path(title="The ID of the item to get")],
+    q: Annotated[str | None, Query(alias="item-query")] = None,
+):
+    results = {"item_id": item_id}
+    if q:
+        results.update({"q": q})
+    return results
+
+# Nested Json body or Nested Models
+class Image_4_Nested(BaseModel):
+    url: HttpUrl
+    name: str
+
+
+class Item_4_Nested(BaseModel):
+    name: str
+    description: str | None = None
+    price: float
+    tax: float | None = None
+    tags: set[str] = set()
+    image: Image_4_Nested | None = None
+
+
+@app.put("/items/nested_body/{item_id}")
+async def update_item(item_id: int, item: Item_4_Nested):
+    results = {"item_id": item_id, "item": item}
+    return results
+
+# Cookie parameter, we actually don't use this. because, first we need to set the cookie in browser and then we can retrieve cookie using this api
+@app.get("/items/cookie/")
+async def read_items(ads_id: Annotated[str | None, Cookie()] = None):
+    return {"ads_id": ads_id}
+
+# Header parameter, we can pass the value through Header in the request and we can get the value using the Header variable
+@app.get("/items/headers/")
+async def read_items(
+    strange_header: Annotated[str | None, Header(convert_underscores=False)] = None,
+):
+    return {"strange_header": strange_header}
