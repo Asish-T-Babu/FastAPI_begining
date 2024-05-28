@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Form, Query, Path, Cookie, Header, Response, status
+from fastapi import FastAPI, Form, Query, Path, Cookie, Header, Response, status, File, UploadFile
 from enum import Enum
 from pydantic import BaseModel, HttpUrl, EmailStr
 from typing import Annotated, Any, Union
@@ -280,3 +280,7 @@ items2 = {
 @app.get("/items/{item_id}/union/", response_model=Union[PlaneItem, CarItem], status_code=status.HTTP_200_OK)
 async def read_item(item_id: str):
     return items2[item_id]
+
+@app.post("/uploadfile/")
+async def create_upload_file(file: UploadFile):
+    return {"filename": file.filename}
